@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle Financeiro Pro</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel para compilar JSX no navegador -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Configurações do Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Estilos personalizados para barra de rolagem */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 20px;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        /* Ajuste para o ícone do calendário ficar branco no header */
+        .calendar-white-icon::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+        }
+        /* Remove estilo padrão do input color para ficar mais bonito */
+        input[type="color"] {
+            -webkit-appearance: none;
+            border: none;
+        }
+        input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+        input[type="color"]::-webkit-color-swatch {
+            border: none;
+            border-radius: 6px; /* Arredondado igual aos outros inputs */
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 selection:bg-emerald-100">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- Componentes de Ícones ---
+        const Icon = ({ children, size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {children}
+            </svg>
+        );
+
+        const PlusCircle = (props) => <Icon {...props}><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></Icon>;
+        const Trash2 = (props) => <Icon {...props}><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></Icon>;
+        const Edit2 = (props) => <Icon {...props}><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></Icon>;
+        const TrendingUp = (props) => <Icon {...props}><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></Icon>;
+        const TrendingDown = (props) => <Icon {...props}><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></Icon>;
+        const Wallet = (props) => <Icon {...props}><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></Icon>;
+        const DollarSign = (props) => <Icon {...props}><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></Icon>;
+        const PieChart = (props) => <Icon {...props}><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></Icon>;
+        const Calendar = (props) => <Icon {...props}><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></Icon>;
+        const Search = (props) => <Icon {...props}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></Icon>;
+        const BarChart3 = (props) => <Icon {...props}><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></Icon>;
+        const Plus = (props) => <Icon {...props}><path d="M5 12h14"/><path d="M12 5v14"/></Icon>;
+        const X = (props) => <Icon {...props}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></Icon>;
+        const Check = (props) => <Icon {...props}><polyline points="20 6 9 17 4 12"/></Icon>;
+        const PiggyBank = (props) => <Icon {...props}><path d="M19 5c-1.5 0-2.8 0.6-3.5 1.5-1.1-1.5-3-2.5-5-2.5-3.6 0-6.5 2.5-6.5 6 0 1.2 0.3 2.3 0.9 3.2-0.5 0.5-0.9 1.1-0.9 1.8 0 1.1 0.9 2 2 2h12c1.1 0 2-0.9 2-2 0-0.7-0.4-1.3-0.9-1.8 0.5-0.9 0.9-2 0.9-3.2 0-2.8-1.8-5-4-5z"/><path d="M14 7v3"/><path d="M14 8.5h2"/></Icon>;
+        const LayoutList = (props) => <Icon {...props}><rect width="7" height="7" x="3" y="3" rx="1" /><rect width="7" height="7" x="3" y="14" rx="1" /><path d="M14 4h7" /><path d="M14 9h7" /><path d="M14 15h7" /><path d="M14 20h7" /></Icon>;
+
+        // --- Dados Iniciais ---
+        const INITIAL_CATEGORIES = {
+            'Moradia': '#3b82f6', 'Alimentação': '#ef4444', 'Trabalho': '#10b981',
+            'Lazer': '#f59e0b', 'Saúde': '#ec4899', 'Transporte': '#8b5cf6', 'Outros': '#64748b',
+        };
+
+        const COLOR_PALETTE = [
+            '#ef4444', '#f97316', '#f59e0b', '#84cc16', '#10b981', 
+            '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1', '#8b5cf6', 
+            '#d946ef', '#f43f5e', '#64748b', '#78716c'
+        ];
+
+        // --- Componente: Card de Resumo ---
+        function SummaryCard({ title, value, icon, type, details, dateLabel }) {
+            const formatValue = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+
+            const getColors = () => {
+                if (type === 'income') return 'bg-white text-emerald-600 border-l-4 border-l-emerald-500';
+                if (type === 'expense') return 'bg-white text-rose-600 border-l-4 border-l-rose-500';
+                if (type === 'investment') return 'bg-white text-blue-600 border-l-4 border-l-blue-500';
+                return value >= 0 ? 'bg-emerald-600 text-white border-none' : 'bg-rose-600 text-white border-none';
+            };
+
+            return (
+                <div className={`relative group p-6 rounded-xl shadow-md transition-all hover:-translate-y-1 hover:z-10 ${getColors()} cursor-default`}>
+                    <div className="flex items-center justify-between mb-4">
+                        <span className={`text-lg font-medium ${type === 'total' ? 'opacity-90' : 'text-slate-600'}`}>{title}</span>
+                        <div className={`p-2 rounded-full ${type === 'total' ? 'bg-white/20' : 'bg-slate-100'}`}>{icon}</div>
+                    </div>
+                    <h3 className="text-3xl font-bold tracking-tight">{formatValue(value)}</h3>
+                    <p className={`text-xs mt-2 ${type === 'total' ? 'text-white/80' : 'text-slate-400'}`}>
+                        {type === 'total' ? (dateLabel === 'Todos os períodos' ? 'Saldo Acumulado' : 'Saldo do Mês') : dateLabel}
+                    </p>
+
+                    {details && details.length > 0 && (
+                        <div className="absolute left-0 top-full mt-2 w-full opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 px-1">
+                            <div className="bg-white rounded-lg shadow-xl border border-slate-100 overflow-hidden ring-1 ring-black/5">
+                                <div className="bg-slate-50 px-3 py-2 border-b border-slate-100 flex justify-between items-center">
+                                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Extrato Rápido</span>
+                                    <span className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full">{details.length}</span>
+                                </div>
+                                <div className="max-h-48 overflow-y-auto custom-scrollbar">
+                                {details.map((t) => (
+                                    <div key={t.id} className="flex justify-between items-center p-2.5 hover:bg-slate-50 border-b last:border-0 border-slate-50 text-slate-600 transition-colors">
+                                        <div className="flex flex-col overflow-hidden mr-2 flex-1 min-w-0">
+                                            <span className="truncate font-medium text-xs text-slate-700 block">{t.description}</span>
+                                            <span className="text-[10px] text-slate-400 block">
+                                                {new Intl.DateTimeFormat('pt-BR').format(new Date(t.date))}
+                                            </span>
+                                        </div>
+                                        <span className={`text-xs font-bold whitespace-nowrap shrink-0 ${
+                                            t.type === 'income' ? 'text-emerald-600' : 
+                                            t.type === 'investment' ? 'text-blue-600' : 'text-rose-600'
+                                        }`}>
+                                            {formatValue(t.amount)}
+                                        </span>
+                                    </div>
+                                ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // --- Componente Principal ---
+        function App() {
+            // Estados
+            const [categories, setCategories] = useState(() => {
+                const saved = localStorage.getItem('finance-app-categories');
+                return saved ? JSON.parse(saved) : INITIAL_CATEGORIES;
+            });
+
+            const [transactions, setTransactions] = useState(() => {
+                const saved = localStorage.getItem('finance-app-data');
+                return saved ? JSON.parse(saved) : [
+                    { id: '1', description: 'Salário Mensal', amount: 5000, type: 'income', category: 'Trabalho', date: '2023-10-01' },
+                    { id: '2', description: 'Aluguel', amount: 1500, type: 'expense', category: 'Moradia', date: '2023-10-05' },
+                    { id: '3', description: 'Supermercado', amount: 800, type: 'expense', category: 'Alimentação', date: '2023-10-10' },
+                ];
+            });
+
+            const [filterMonth, setFilterMonth] = useState(() => new Date().toISOString().slice(0, 7));
+            const [description, setDescription] = useState('');
+            const [amount, setAmount] = useState('');
+            const [category, setCategory] = useState('Outros');
+            const [type, setType] = useState('expense');
+            const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+            const [editingId, setEditingId] = useState(null);
+            const [searchTerm, setSearchTerm] = useState('');
+            const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+            const [isEditingCategory, setIsEditingCategory] = useState(false);
+            const [newCategoryName, setNewCategoryName] = useState('');
+            const [editedCategoryName, setEditedCategoryName] = useState('');
+            const [newCategoryColor, setNewCategoryColor] = useState('#10b981');
+
+            useEffect(() => { localStorage.setItem('finance-app-data', JSON.stringify(transactions)); }, [transactions]);
+            useEffect(() => { localStorage.setItem('finance-app-categories', JSON.stringify(categories)); }, [categories]);
+
+            // Lógica
+            // Se filterMonth for vazio, mostra TUDO (acumulado). Se tiver mês, filtra.
+            const currentTransactions = filterMonth 
+                ? transactions.filter(t => t.date.startsWith(filterMonth))
+                : transactions;
+            
+            const summary = currentTransactions.reduce((acc, t) => {
+                if (t.type === 'income') { 
+                    acc.income += t.amount; 
+                    acc.total += t.amount; 
+                } else if (t.type === 'expense') { 
+                    acc.expense += t.amount; 
+                    acc.total -= t.amount; 
+                } else if (t.type === 'investment') {
+                    acc.investment += t.amount;
+                    // Não soma no total (balanço), apenas acumula no card de investimento
+                    // MAS, se a intenção do Balanço Mensal é "Saldo", dinheiro investido "sai" da conta corrente?
+                    // Pela regra anterior: "não somar a categoria investimento na despesa e nem no balanço mensal"
+                    // Então, Saldo = Entradas - Saídas. Investimento é um valor à parte.
+                }
+                return acc;
+            }, { income: 0, expense: 0, investment: 0, total: 0 });
+
+            // Cálculos para o Gráfico de Pizza
+            const expensesByCategory = currentTransactions
+                .filter(t => t.type === 'expense')
+                .reduce((acc, t) => { acc[t.category] = (acc[t.category] || 0) + t.amount; return acc; }, {});
+
+            const totalExpensesForChart = Object.values(expensesByCategory).reduce((a, b) => a + b, 0);
+
+            let currentGradientPos = 0;
+            const chartSegments = Object.entries(expensesByCategory)
+                .sort(([, a], [, b]) => b - a)
+                .map(([cat, val]) => {
+                    const percentage = totalExpensesForChart > 0 ? (val / totalExpensesForChart) * 100 : 0;
+                    const end = currentGradientPos + percentage;
+                    const segment = { category: cat, value: val, percentage, color: categories[cat] || '#cbd5e1', start: currentGradientPos, end };
+                    currentGradientPos = end;
+                    return segment;
+                });
+
+            const gradientString = chartSegments.length > 0
+                ? `conic-gradient(${chartSegments.map(s => `${s.color} ${s.start}% ${s.end}%`).join(', ')})`
+                : 'conic-gradient(#f1f5f9 0% 100%)';
+
+            // Cálculos para o Gráfico de Barras
+            const maxBarValue = Math.max(summary.income, summary.expense, summary.investment) || 1;
+            const incomeBarHeight = summary.income > 0 ? Math.max((summary.income / maxBarValue) * 80, 2) : 0;
+            const expenseBarHeight = summary.expense > 0 ? Math.max((summary.expense / maxBarValue) * 80, 2) : 0;
+
+            const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+            const formatDate = (dateStr) => new Intl.DateTimeFormat('pt-BR', {timeZone: 'UTC'}).format(new Date(dateStr + 'T00:00:00'));
+            
+            const getMonthLabel = () => {
+                if (!filterMonth) return 'Todos os períodos';
+                const [year, month] = filterMonth.split('-');
+                const d = new Date(parseInt(year), parseInt(month) - 1);
+                const monthName = new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(d);
+                return `${monthName.charAt(0).toUpperCase() + monthName.slice(1)} de ${year}`;
+            };
+
+            const handleAddTransaction = (e) => {
+                e.preventDefault();
+                if (!description || !amount || !date) return;
+                const val = parseFloat(amount.replace(',', '.'));
+                
+                if (editingId) {
+                    setTransactions(transactions.map(t => t.id === editingId ? { ...t, description, amount: val, type, category, date } : t));
+                    setEditingId(null);
+                } else {
+                    setTransactions([{ id: crypto.randomUUID(), description, amount: val, type, category, date }, ...transactions]);
+                }
+                setDescription(''); setAmount(''); setCategory('Outros'); setDate(new Date().toISOString().split('T')[0]); setType('expense');
+            };
+
+            const handleEditClick = (t) => {
+                setDescription(t.description); setAmount(t.amount.toString()); setType(t.type); setCategory(t.category); setDate(t.date); setEditingId(t.id);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            };
+
+            const handleCancelEdit = () => {
+                setDescription(''); setAmount(''); setCategory('Outros'); setDate(new Date().toISOString().split('T')[0]); setType('expense'); setEditingId(null);
+            };
+
+            const removeTransaction = (id) => {
+                if (window.confirm("Tem certeza que deseja remover este registro?")) {
+                   setTransactions(transactions.filter((t) => t.id !== id));
+                   if (editingId === id) handleCancelEdit();
+                }
+            };
+
+            // Funções de Categoria
+            const handleCreateCategory = (e) => {
+                if (e) e.preventDefault();
+                const name = newCategoryName.trim();
+                if (!name) return;
+                if (categories[name]) { alert('Esta categoria já existe!'); return; }
+                const color = newCategoryColor || COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)];
+                setCategories(prev => ({ ...prev, [name]: color }));
+                setCategory(name); setNewCategoryName(''); setIsCreatingCategory(false);
+            };
+
+            const startCreatingCategory = (e) => {
+                if(e) e.preventDefault();
+                setNewCategoryColor(COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)]);
+                setIsCreatingCategory(true);
+                setIsEditingCategory(false);
+            }
+
+            const cancelCreatingCategory = (e) => {
+                if(e) e.preventDefault();
+                setIsCreatingCategory(false);
+                setNewCategoryName('');
+            }
+
+            // Funções de Edição de Categoria
+            const startEditingCategory = (e) => {
+                if(e) e.preventDefault();
+                setEditedCategoryName(category);
+                setIsEditingCategory(true);
+            };
+
+            const cancelEditingCategory = (e) => {
+                if(e) e.preventDefault();
+                setIsEditingCategory(false);
+                setEditedCategoryName('');
+            };
+
+            const saveEditedCategory = (e) => {
+                if(e) e.preventDefault();
+                if (category === 'Outros') return;
+
+                const name = editedCategoryName.trim();
+                if (!name) return;
+                if (name === category) {
+                    setIsEditingCategory(false);
+                    return;
+                }
+                if (categories[name]) {
+                    alert('Esta categoria já existe!');
+                    return;
+                }
+
+                const newCategories = { ...categories };
+                newCategories[name] = newCategories[category];
+                delete newCategories[category];
+
+                const newTransactions = transactions.map(t => 
+                    t.category === category ? { ...t, category: name } : t
+                );
+
+                setCategories(newCategories);
+                setTransactions(newTransactions);
+                setCategory(name);
+                setIsEditingCategory(false);
+            };
+
+            const handleDeleteCategory = (e) => {
+                if(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+                
+                if (category === 'Outros') {
+                    alert('A categoria "Outros" não pode ser excluída.');
+                    return;
+                }
+                
+                if (!categories[category]) return;
+
+                if (window.confirm(`Tem certeza que deseja excluir a categoria "${category}"?\n\nAs transações vinculadas a ela serão movidas para "Outros".`)) {
+                    const newCategories = { ...categories };
+                    delete newCategories[category];
+                    
+                    const newTransactions = transactions.map(t => 
+                        t.category === category ? { ...t, category: 'Outros' } : t
+                    );
+                    
+                    setCategories(newCategories);
+                    setTransactions(newTransactions);
+                    setCategory('Outros');
+                    setIsEditingCategory(false);
+                    setEditedCategoryName('');
+                }
+            };
+
+            const handleUpdateCategoryColor = (catName, newColor) => {
+                setCategories(prev => ({ ...prev, [catName]: newColor }));
+            };
+
+            const filteredTransactions = currentTransactions.filter(t => 
+                t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                t.category.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+
+            return (
+                <div className="min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-emerald-100">
+                    <header className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white pt-8 pb-20 px-4 shadow-lg relative z-0">
+                        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+                            <div className="flex items-center gap-3 self-start sm:self-auto">
+                                <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm"><DollarSign size={28} /></div>
+                                <h1 className="text-2xl font-bold tracking-tight">Finanças Pro</h1>
+                            </div>
+                            <div className="flex items-center gap-3 self-end sm:self-auto">
+                                <div className="flex items-center gap-2 bg-white/20 px-3 py-1.5 rounded-lg backdrop-blur-sm hover:bg-white/30 transition-colors cursor-pointer group relative">
+                                    {filterMonth ? (
+                                        <>
+                                            <Calendar size={18} className="text-white/90" />
+                                            <input type="month" value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} className="bg-transparent border-none text-white text-sm font-medium focus:outline-none calendar-white-icon w-32 sm:w-auto" />
+                                            <button 
+                                                onClick={() => setFilterMonth('')}
+                                                className="ml-2 p-1 hover:bg-white/20 rounded-full text-white/70 hover:text-white transition-colors"
+                                                title="Limpar filtro (Ver acumulado)"
+                                            >
+                                                <LayoutList size={14} />
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <button 
+                                            onClick={() => setFilterMonth(new Date().toISOString().slice(0, 7))}
+                                            className="flex items-center gap-2 text-white text-sm font-medium w-full"
+                                            title="Filtrar por mês"
+                                        >
+                                            <LayoutList size={18} className="text-white/90" />
+                                            <span>Visão Geral (Todos)</span>
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="text-sm opacity-90 bg-emerald-800/40 px-3 py-1.5 rounded-lg backdrop-blur-sm border border-emerald-500/30">
+                                    {currentTransactions.length} registros
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+
+                    <main className="max-w-6xl mx-auto px-4 -mt-12 mb-12 relative z-10">
+                        {/* Grid de Resumo Atualizado para 4 Colunas */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                            <SummaryCard title="Entradas" value={summary.income} icon={<TrendingUp size={24} />} type="income" details={currentTransactions.filter(t => t.type === 'income')} dateLabel={getMonthLabel()} />
+                            <SummaryCard title="Investido" value={summary.investment} icon={<PiggyBank size={24} />} type="investment" details={currentTransactions.filter(t => t.type === 'investment')} dateLabel={getMonthLabel()} />
+                            <SummaryCard title="Saídas" value={summary.expense} icon={<TrendingDown size={24} />} type="expense" details={currentTransactions.filter(t => t.type === 'expense')} dateLabel={getMonthLabel()} />
+                            <SummaryCard title="Total" value={summary.total} icon={<Wallet size={24} />} type="total" dateLabel={getMonthLabel()} />
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                            <section className="lg:col-span-4 space-y-6">
+                                <div className={`bg-white rounded-2xl shadow-sm border p-6 sticky top-6 transition-all duration-300 ${editingId ? 'border-amber-300 ring-4 ring-amber-100' : 'border-slate-100'}`}>
+                                    <h2 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${editingId ? 'text-amber-600' : 'text-slate-700'}`}>
+                                        {editingId ? <Edit2 size={20} /> : <PlusCircle size={20} className="text-emerald-600" />}
+                                        {editingId ? 'Editar Transação' : 'Nova Transação'}
+                                    </h2>
+                                    
+                                    <form onSubmit={handleAddTransaction} className="space-y-4">
+                                        <div>
+                                            <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">Descrição</label>
+                                            <input type="text" required placeholder="Ex: Aluguel..." value={description} onChange={(e) => setDescription(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none transition-all" />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">Valor (R$)</label>
+                                                <input type="number" required step="0.01" placeholder="0,00" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none transition-all" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">Data</label>
+                                                <input type="date" required value={date} onChange={(e) => setDate(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none transition-all" />
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-1 gap-3">
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">Tipo</label>
+                                                <div className="flex rounded-lg bg-slate-100 p-1">
+                                                    <button type="button" onClick={() => setType('income')} className={`flex-1 py-2 text-sm font-medium rounded-l-md transition-all flex justify-center items-center gap-1 ${type === 'income' ? 'bg-emerald-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200'}`}><TrendingUp size={16} /> Ent</button>
+                                                    <button type="button" onClick={() => setType('expense')} className={`flex-1 py-2 text-sm font-medium transition-all flex justify-center items-center gap-1 ${type === 'expense' ? 'bg-rose-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200'}`}><TrendingDown size={16} /> Sai</button>
+                                                    <button type="button" onClick={() => setType('investment')} className={`flex-1 py-2 text-sm font-medium rounded-r-md transition-all flex justify-center items-center gap-1 ${type === 'investment' ? 'bg-blue-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200'}`}><PiggyBank size={16} /> Inv</button>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-medium text-slate-500 mb-1 uppercase tracking-wider">Categoria</label>
+                                                <div className="flex gap-2">
+                                                {isCreatingCategory ? (
+                                                    <div className="flex-1 flex gap-2 animate-in fade-in slide-in-from-left-2 duration-200">
+                                                        <input 
+                                                            type="color" 
+                                                            value={newCategoryColor} 
+                                                            onChange={(e) => setNewCategoryColor(e.target.value)}
+                                                            className="h-[46px] w-[36px] p-1 bg-white border border-slate-200 rounded-lg cursor-pointer shrink-0" 
+                                                            title="Escolher cor da nova categoria"
+                                                        />
+                                                        <input type="text" autoFocus placeholder="Nova..." value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} className="flex-1 w-full p-3 bg-white border border-emerald-500 rounded-lg focus:outline-none text-sm h-[46px] min-w-0" onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleCreateCategory())} />
+                                                        <div className="flex gap-1 shrink-0">
+                                                            <button type="button" onClick={handleCreateCategory} className="bg-emerald-600 text-white h-[46px] w-[40px] rounded-lg hover:bg-emerald-700 flex items-center justify-center"><Check size={18} /></button>
+                                                            <button type="button" onClick={cancelCreatingCategory} className="bg-slate-200 text-slate-600 h-[46px] w-[40px] rounded-lg hover:bg-slate-300 flex items-center justify-center"><X size={18} /></button>
+                                                        </div>
+                                                    </div>
+                                                ) : isEditingCategory ? (
+                                                    <div className="flex-1 flex gap-2 animate-in fade-in slide-in-from-left-2 duration-200">
+                                                        <input 
+                                                            type="color" 
+                                                            value={categories[category] || '#cbd5e1'} 
+                                                            onChange={(e) => handleUpdateCategoryColor(category, e.target.value)}
+                                                            disabled={category === 'Outros'}
+                                                            className={`h-[46px] w-[36px] p-1 bg-white border border-slate-200 rounded-lg cursor-pointer shrink-0 ${category === 'Outros' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                            title="Mudar cor"
+                                                        />
+                                                        <input 
+                                                            type="text" 
+                                                            autoFocus 
+                                                            placeholder="Nome da categoria..." 
+                                                            value={category === 'Outros' ? 'Outros' : editedCategoryName} 
+                                                            onChange={(e) => setEditedCategoryName(e.target.value)}
+                                                            disabled={category === 'Outros'}
+                                                            className={`flex-1 w-full p-3 bg-white border border-amber-400 rounded-lg focus:outline-none text-sm h-[46px] min-w-0 ${category === 'Outros' ? 'text-slate-400 bg-slate-50 border-slate-200' : ''}`}
+                                                            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), saveEditedCategory())} 
+                                                        />
+                                                        <div className="flex gap-1 shrink-0">
+                                                            {category !== 'Outros' && (
+                                                                <>
+                                                                    <button type="button" onClick={handleDeleteCategory} className="bg-rose-100 text-rose-500 h-[46px] w-[40px] rounded-lg hover:bg-rose-200 flex items-center justify-center" title="Excluir Categoria"><Trash2 size={18} /></button>
+                                                                    <button type="button" onClick={saveEditedCategory} className="bg-emerald-600 text-white h-[46px] w-[40px] rounded-lg hover:bg-emerald-700 flex items-center justify-center"><Check size={18} /></button>
+                                                                </>
+                                                            )}
+                                                            <button type="button" onClick={startCreatingCategory} className="bg-emerald-100 text-emerald-600 h-[46px] w-[40px] rounded-lg hover:bg-emerald-200 flex items-center justify-center" title="Nova Categoria"><Plus size={18} /></button>
+                                                            <button type="button" onClick={cancelEditingCategory} className="bg-slate-200 text-slate-600 h-[46px] w-[40px] rounded-lg hover:bg-slate-300 flex items-center justify-center"><X size={18} /></button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex-1 flex gap-1 animate-in fade-in slide-in-from-left-2 duration-200">
+                                                        <select value={category} onChange={(e) => setCategory(e.target.value)} className="flex-1 w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm h-[46px] min-w-0">
+                                                            {Object.keys(categories).map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                                                        </select>
+                                                        <button type="button" onClick={startEditingCategory} className="bg-slate-100 text-slate-500 h-[46px] w-[40px] rounded-lg hover:bg-emerald-50 hover:text-emerald-600 border border-slate-200 shrink-0 flex items-center justify-center" title="Gerenciar Categoria"><Edit2 size={18} /></button>
+                                                    </div>
+                                                )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="flex gap-2 pt-2">
+                                            <button type="submit" className={`flex-1 text-white font-semibold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${editingId ? 'bg-amber-500 hover:bg-amber-600' : 'bg-emerald-600 hover:bg-emerald-700'}`}>
+                                                {editingId ? 'Atualizar Registro' : 'Adicionar Registro'}
+                                            </button>
+                                            {editingId && (
+                                                <button type="button" onClick={handleCancelEdit} className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-3 px-4 rounded-lg shadow-sm hover:shadow-md transition-all active:scale-95">
+                                                    Cancelar
+                                                </button>
+                                            )}
+                                        </div>
+                                    </form>
+                                </div>
+                            </section>
+
+                            <section className="lg:col-span-8 space-y-6">
+                                {/* Área de Gráficos: Agora dividida em 2 colunas para telas médias */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {/* Gráfico de Barras: Entradas vs Saídas */}
+                                    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col justify-between">
+                                        <h2 className="text-sm font-semibold mb-6 flex items-center gap-2 text-slate-700">
+                                            <BarChart3 size={18} className="text-emerald-600" /> Comparativo Mensal
+                                        </h2>
+                                        
+                                        <div className="flex items-end justify-center gap-8 h-48 pb-2">
+                                            {/* Barra de Receitas */}
+                                            <div className="flex flex-col items-center justify-end h-full w-16 gap-2">
+                                                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded mb-1">
+                                                    {formatCurrency(summary.income)}
+                                                </span>
+                                                <div className="w-full bg-emerald-100 rounded-t-lg relative overflow-hidden transition-all duration-500 ease-out" style={{ height: `${incomeBarHeight}%` }}>
+                                                    <div className="absolute bottom-0 left-0 w-full bg-emerald-500 transition-all duration-500" style={{ height: '100%' }}></div>
+                                                </div>
+                                                <span className="text-xs font-medium text-slate-500">Entradas</span>
+                                            </div>
+
+                                            {/* Barra de Despesas */}
+                                            <div className="flex flex-col items-center justify-end h-full w-16 gap-2">
+                                                <span className="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded mb-1">
+                                                    {formatCurrency(summary.expense)}
+                                                </span>
+                                                <div className="w-full bg-rose-100 rounded-t-lg relative overflow-hidden transition-all duration-500 ease-out" style={{ height: `${expenseBarHeight}%` }}>
+                                                    <div className="absolute bottom-0 left-0 w-full bg-rose-500 transition-all duration-500" style={{ height: '100%' }}></div>
+                                                </div>
+                                                <span className="text-xs font-medium text-slate-500">Saídas</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Gráfico de Pizza: Categorias */}
+                                    {totalExpensesForChart > 0 ? (
+                                        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+                                            <h2 className="text-sm font-semibold mb-6 flex items-center gap-2 text-slate-700">
+                                                <PieChart size={18} className="text-emerald-600" /> Categorias (Despesas)
+                                            </h2>
+                                            
+                                            {/* Layout alterado para flex-row em telas maiores para ficar ao lado */}
+                                            <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+                                                
+                                                {/* Gráfico */}
+                                                <div className="relative w-40 h-40 rounded-full shadow-inner shrink-0" style={{ background: gradientString }}>
+                                                    <div className="absolute inset-0 m-8 bg-white rounded-full flex items-center justify-center flex-col shadow-sm">
+                                                        <span className="text-[10px] text-slate-400 font-medium">Total</span>
+                                                        <span className="text-sm font-bold text-slate-700">{Intl.NumberFormat('pt-BR', { notation: "compact", compactDisplay: "short", style: 'currency', currency: 'BRL' }).format(totalExpensesForChart)}</span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Legenda Lateral com Valores */}
+                                                <div className="w-full flex-1 flex flex-col gap-1 max-h-48 overflow-y-auto custom-scrollbar pr-1">
+                                                    {chartSegments.map((segment) => {
+                                                        // Filter transactions for this segment
+                                                        const segmentTransactions = currentTransactions.filter(t => t.type === 'expense' && t.category === segment.category);
+                                                        
+                                                        return (
+                                                            <div key={segment.category} className="relative group flex items-center justify-between p-1.5 rounded hover:bg-slate-50 transition-colors cursor-help border-b border-slate-50 last:border-0">
+                                                                <div className="flex items-center gap-2 overflow-hidden">
+                                                                    <span className="truncate text-xs font-medium text-slate-700">{segment.category}</span>
+                                                                </div>
+                                                                
+                                                                <div className="flex items-center gap-3 shrink-0">
+                                                                    <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 rounded">{segment.percentage.toFixed(0)}%</span>
+                                                                    <span className="text-xs font-bold tabular-nums" style={{ color: segment.color }}>{formatCurrency(segment.value)}</span>
+                                                                </div>
+                                                                
+                                                                {/* Tooltip de Detalhes (Mantido e melhorado) */}
+                                                                <div className="absolute right-0 top-full mt-1 w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none">
+                                                                    <div className="bg-white rounded-lg shadow-xl border border-slate-100 overflow-hidden ring-1 ring-black/5">
+                                                                        <div className="bg-slate-50 px-2 py-1.5 border-b border-slate-100 flex justify-between items-center">
+                                                                            <span className="font-semibold text-xs text-slate-600 truncate max-w-[100px]">{segment.category}</span>
+                                                                            <span className="text-[9px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full">{segmentTransactions.length} itens</span>
+                                                                        </div>
+                                                                        <div className="max-h-32 overflow-y-auto custom-scrollbar bg-white">
+                                                                            {segmentTransactions.length > 0 ? (
+                                                                                segmentTransactions.map((t) => (
+                                                                                    <div key={t.id} className="flex justify-between items-center p-2 hover:bg-slate-50 border-b last:border-0 border-slate-50 text-slate-600 transition-colors">
+                                                                                        <div className="flex flex-col overflow-hidden mr-2 flex-1 min-w-0">
+                                                                                            <span className="truncate font-medium text-[10px] text-slate-700 block">{t.description}</span>
+                                                                                            <span className="text-[9px] text-slate-400 block">
+                                                                                                {new Intl.DateTimeFormat('pt-BR').format(new Date(t.date))}
+                                                                                            </span>
+                                                                                        </div>
+                                                                                        <span className="text-[10px] font-bold whitespace-nowrap shrink-0 text-rose-600">
+                                                                                            {formatCurrency(t.amount)}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                ))
+                                                                            ) : (
+                                                                                <div className="p-2 text-center text-slate-400 text-[10px]">Sem registros.</div>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col items-center justify-center text-slate-400">
+                                            <PieChart size={32} className="mb-2 opacity-20" />
+                                            <p className="text-xs text-center">Sem despesas categorizadas.</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col h-full min-h-[400px]">
+                                    <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50/50">
+                                        <h2 className="text-lg font-semibold text-slate-700 flex items-center gap-2"><Wallet size={20} className="text-emerald-600" /> Histórico ({filteredTransactions.length})</h2>
+                                        <div className="relative w-full sm:w-auto">
+                                            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                            <input type="text" placeholder="Buscar neste mês..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9 pr-4 py-1.5 text-sm bg-white border border-slate-200 rounded-full focus:ring-2 focus:ring-emerald-500 outline-none w-full sm:w-48 transition-all" />
+                                        </div>
+                                    </div>
+                                    <div className="overflow-y-auto flex-1 max-h-[500px] p-2">
+                                        {filteredTransactions.length === 0 ? (
+                                            <div className="h-full flex flex-col items-center justify-center text-slate-400 py-10"><Wallet size={48} className="mb-2 opacity-20" /><p>Nenhuma transação encontrada.</p></div>
+                                        ) : (
+                                            <div className="space-y-2">
+                                                {filteredTransactions.map((t) => (
+                                                    <div key={t.id} className={`group flex items-center justify-between p-4 bg-white hover:bg-slate-50 border border-transparent hover:border-slate-200 rounded-xl transition-all duration-200 shadow-sm ${editingId === t.id ? 'border-amber-400 bg-amber-50' : ''}`}>
+                                                        <div className="flex items-center gap-4 flex-1 min-w-0">
+                                                            <div className={`p-2.5 rounded-full shrink-0 ${
+                                                                t.type === 'income' ? 'bg-emerald-100 text-emerald-600' : 
+                                                                t.type === 'investment' ? 'bg-blue-100 text-blue-600' : 'bg-rose-100 text-rose-600'
+                                                            }`}>
+                                                                {t.type === 'income' ? <TrendingUp size={18} /> : 
+                                                                 t.type === 'investment' ? <PiggyBank size={18} /> : <TrendingDown size={18} />}
+                                                            </div>
+                                                            <div className="min-w-0 flex-1">
+                                                                <p className="font-semibold text-slate-800 truncate pr-2">{t.description}</p>
+                                                                <div className="flex items-center gap-3 text-xs text-slate-500 mt-0.5">
+                                                                    <span className="flex items-center gap-1 shrink-0"><Calendar size={12} /> {formatDate(t.date)}</span>
+                                                                    <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-600 truncate max-w-[120px]" style={{ color: categories[t.category] || '#64748b', backgroundColor: `${categories[t.category] || '#64748b'}15` }}>{t.category}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-4 shrink-0 pl-2">
+                                                            <span className={`font-bold whitespace-nowrap ${
+                                                                t.type === 'income' ? 'text-emerald-600' : 
+                                                                t.type === 'investment' ? 'text-blue-600' : 'text-rose-600'
+                                                            }`}>
+                                                                {t.type === 'expense' && '- '}{formatCurrency(t.amount)}
+                                                            </span>
+                                                            <div className="flex gap-1">
+                                                                <button onClick={() => handleEditClick(t)} className="text-slate-300 hover:text-amber-600 hover:bg-amber-50 p-2 rounded-full transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100" title="Editar"><Edit2 size={18} /></button>
+                                                                <button onClick={() => removeTransaction(t.id)} className="text-slate-300 hover:text-rose-500 hover:bg-rose-50 p-2 rounded-full transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100" title="Remover"><Trash2 size={18} /></button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
+                    </main>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
